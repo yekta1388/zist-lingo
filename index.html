@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>زیست‌لینگو</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
+    body { background-color: #131f24; color: #fff; padding: 20px; display: flex; justify-content: center; }
+    .app-container { width: 100%; max-width: 420px; display: flex; flex-direction: column; min-height: 90vh; justify-content: space-between; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #202f36; border-radius: 16px; font-weight: bold; font-size: 18px; }
+    .stat { display: flex; align-items: center; gap: 6px; }
+    .hearts { color: #ff4b4b; }
+    .xp { color: #ffc800; }
+    .question-box { margin-top: 30px; text-align: center; }
+    .question-title { font-size: 20px; margin-bottom: 24px; line-height: 1.6; }
+    .options-grid { display: flex; flex-direction: column; gap: 12px; }
+    .option-btn { background: #202f36; border: 2px solid #37464f; border-bottom: 5px solid #37464f; color: #fff; padding: 16px; border-radius: 16px; font-size: 16px; cursor: pointer; text-align: right; }
+    .option-btn.correct { background: #58cc02; border-color: #58a700; color: #fff; }
+    .option-btn.wrong { background: #ea2b2b; border-color: #ba1717; color: #fff; }
+    .footer-action { margin-top: 24px; }
+    .action-btn { width: 100%; background: #58cc02; border: none; border-bottom: 4px solid #58a700; color: #fff; padding: 16px; border-radius: 16px; font-size: 18px; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <div class="top-bar">
+      <div class="stat hearts">❤️ <span id="hearts-count">5</span></div>
+      <div class="stat xp">⚡ <span id="xp-count">0</span> XP</div>
+    </div>
+
+    <div class="question-box">
+      <div class="question-title" id="question-text">در حال بارگذاری سوال...</div>
+      <div class="options-grid" id="options-container"></div>
+    </div>
+
+    <div class="footer-action">
+      <button class="action-btn" id="next-btn" onclick="nextQuestion()" style="display: none;">سوال بعدی</button>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://juuqpelrxqfnuenophfp.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_vJxwPHdWSlRUbI13svBYcA_25BOpLzR";
+
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let questions = [];
+    let currentIndex = 0;
+    let hearts = 5;
+    let xp = 0;
+
+    async function loadQuestions() {
+      const { data, error } = await client.from('questions').select('*');
+      if (error || !data || data.length === 0) {
+        document.getElementById('question-text').innerText = "خطا در اتصال یا سوالی یافت نشد.";
+        return;
+      }
+      questions = data;
+      showQuestion();
+    }
+
+    function showQuestion() {
+      document.getElementById('next-btn').style.display = 'none';
+      const q = questions[currentIndex];
+      document.getElementById('question-text').innerText = q.question_text;
+
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+
+      const options = [
+        { key: 'A', text: q.option_a },
+        { key: 'B', text: q.option_b },
+        { key: 'C', text: q.option_c },
+        { key: 'D', text: q.option_d }
+      ];
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt.text;
+        btn.onclick = () => selectAnswer(btn, opt.key, q.correct_option);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectAnswer(btn, selectedKey, correctKey) {
+      const buttons = document.querySelectorAll('.option-btn');
+      buttons.forEach(b => b.disabled = true);
+
+      if (selectedKey === correctKey) {
+        btn.classList.add('correct');
+        xp += 10;
+        document.getElementById('xp-count').innerText = xp;
+      } else {
+        btn.classList.add('wrong');
+        hearts = Math.max(0, hearts - 1);
+        document.getElementById('hearts-count').innerText = hearts;
+      }
+
+      document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function nextQuestion() {
+      if (hearts <= 0) {
+        alert("فرصت‌های شما تمام شد! از ابتدا شروع کنید.");
+        location.reload();
+        return;
+      }
+      currentIndex++;
+      if (currentIndex < questions.length) {
+        showQuestion();
+      } else {
+        document.getElementById('question-text').innerText = "آفرین! این مرحله تمام شد 🎉";
+        document.getElementById('options-container').innerHTML = '';
+        document.getElementById('next-btn').style.display = 'none';
+      }
+    }
+
+    loadQuestions();
+  </script>
+</body>
+</html>
